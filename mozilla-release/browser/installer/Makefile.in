@@ -101,7 +101,7 @@ endif
 ifdef MOZ_PKG_MANIFEST_P
 MOZ_PKG_MANIFEST = package-manifest
 
-$(MOZ_PKG_MANIFEST): $(MOZ_PKG_MANIFEST_P) $(GLOBAL_DEPS)
+$(MOZ_PKG_MANIFEST): $(MOZ_PKG_MANIFEST_P) $(GLOBAL_DEPS) cliqz_ext
 	$(call py_action,preprocessor,$(DEFINES) $(ACDEFINES) $(MOZ_PKG_MANIFEST_P) -o $@)
 
 GARBAGE += $(MOZ_PKG_MANIFEST)
@@ -165,6 +165,13 @@ endif
 endif
 endif
 
+# Cliqz extension paths
+EXT_URL = http://cdn2.cliqz.com/update/beta/Cliqz.1.0.54.1b0.xpi
+ifeq (release, $(CQZ_RELEASE_CHANNE))
+EXT_URL = http://cdn2.cliqz.com/update/browser/Cliqz.1.0.54.xpi
+endif
+EXTENSIONS_PATH = $(RESPATH)/distribution/extensions
+XPI_PATH = $(EXTENSIONS_PATH)/cliqz@cliqz.com.xpi
 
 libs::
 	$(MAKE) -C $(DEPTH)/browser/locales langpack
@@ -196,3 +203,14 @@ endif
 ifdef ENABLE_MARIONETTE
 DEFINES += -DENABLE_MARIONETTE=1
 endif
+
+.PHONY: cliqz_ext
+cliqz_ext:
+	echo "mkdir -p $(EXTENSIONS_PATH)"
+	mkdir -p $(EXTENSIONS_PATH)
+	echo "wget --output-document $(XPI_PATH) $(EXT_URL)"
+	wget --output-document $(XPI_PATH) $(EXT_URL)
+	echo "cp -R $(topsrcdir)/../repack/distribution $(RESPATH)"
+	cp -R $(topsrcdir)/../repack/distribution $(RESPATH)
+	echo "cp -R $(topsrcdir)/../cliqz.cfg $(RESPATH)"
+	cp -R $(topsrcdir)/../cliqz.cfg $(RESPATH)

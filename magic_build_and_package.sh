@@ -88,34 +88,16 @@ fi
 echo '***** Building *****'
 ./mach build
 
-#inject the repackaging
-if [[ "$CQZ_RELEASE_CHANNEL" == 'release' ]]; then
-  wget --output-document cliqz@cliqz.com.xpi http://cdn2.cliqz.com/update/browser/Cliqz.1.0.54.xpi
-else
-  wget --output-document cliqz@cliqz.com.xpi http://cdn2.cliqz.com/update/beta/Cliqz.1.0.54.1b0.xpi
-fi
-
-echo '***** Inject the repackaging *****'
-if [ $IS_MAC_OS ]; then
-    cp -R ../repack/distribution ./obj-firefox/dist/CLIQZ.app/Contents/Resources/
-    cp -R ../cliqz.cfg ./obj-firefox/dist/CLIQZ.app/Contents/Resources/
-    cp -R cliqz@cliqz.com.xpi ./obj-firefox/dist/CLIQZ.app/Contents/Resources/distribution/extensions/
-else
-    cp -R ../repack/distribution ./obj-firefox/dist/bin/
-    cp -R ../cliqz.cfg ./obj-firefox/dist/bin/
-    cp -R cliqz@cliqz.com.xpi ./obj-firefox/dist/bin/distribution/extensions/
-fi
-
-rm cliqz@cliqz.com.xpi
-
 # for German builds
+# TODO: Move to Makefile.
+RES_PATH=./obj-firefox/dist/bin
+if [ $IS_MAC_OS ]; then
+    RES_PATH=./obj-firefox/dist/CLIQZ.app/Contents/Resources
+fi
 if [ $IS_DE ]; then
     echo '***** Copying dictionaries for German builds *****'
-    if [ $IS_MAC_OS ]; then
-        mkdir -p obj-firefox/dist/CLIQZ.app/Contents/Resources/dictionaries; cp extensions/spellcheck/locales/en-US/hunspell/en-US.* obj-firefox/dist/CLIQZ.app/Contents/Resources/dictionaries
-    else
-        mkdir -p obj-firefox/dist/bin/dictionaries; cp extensions/spellcheck/locales/en-US/hunspell/en-US.* obj-firefox/dist/bin/dictionaries
-    fi
+    mkdir -p $RES_PATH/dictionaries
+    cp extensions/spellcheck/locales/en-US/hunspell/en-US.* $RES_PATH/dictionaries
 fi
 
 #packaging
