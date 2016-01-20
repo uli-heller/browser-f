@@ -66,6 +66,10 @@ export MOZ_AUTOMATION_UPLOAD=1
 # Fixed by https://bugzilla.mozilla.org/show_bug.cgi?id=1184696
 find . -name \*.pyc -delete
 
+if [[ $IS_MAC_OS ]]; then
+  echo ". \$topsrcdir/build/macosx/universal/mozconfig" >> $MOZCONFIG
+fi
+
 if [ $CQZ_GOOGLE_API_KEY ]; then
   echo $CQZ_GOOGLE_API_KEY > ../google-api-key
   echo "ac_add_options --with-google-api-keyfile=\"$PWD/../google-api-key\"" >> $MOZCONFIG
@@ -125,7 +129,11 @@ fi
 
 #packaging
 echo '***** Packaging *****'
-./mach package
+if [[ $IS_MAC_OS ]]; then
+  make -C ${MOZ_OBJDIR}/i386 package
+else
+  ./mach package
+fi
 
 if [ $IS_WIN ]; then
     echo '***** Windows packaging: *****'
