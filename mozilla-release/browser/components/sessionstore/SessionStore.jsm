@@ -2575,6 +2575,8 @@ var SessionStoreInternal = {
 
     // update the internal state data for this window
     for (let tab of tabs) {
+      if (tab.private)
+        continue;
       tabsData.push(TabState.collect(tab));
     }
     winData.selected = tabbrowser.mTabBox.selectedIndex + 1;

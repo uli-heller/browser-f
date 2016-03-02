@@ -286,6 +286,7 @@ var gInitialPages = [
 #include browser-tabview.js
 #include browser-thumbnails.js
 #include browser-trackingprotection.js
+#include browser-autoPrivateTab.js
 
 #ifdef MOZ_DATA_REPORTING
 #include browser-data-submission-info-bar.js
@@ -977,6 +978,7 @@ var gBrowserInit = {
     DevEdition.init();
     AboutPrivateBrowsingListener.init();
     TrackingProtection.init();
+    AutoPrivateTab.init();
 
     let mm = window.getGroupMessageManager("browsers");
     mm.loadFrameScript("chrome://browser/content/tab-content.js", true);
@@ -1995,6 +1997,10 @@ function openLocation() {
 function BrowserOpenTab()
 {
   openUILinkIn(BROWSER_NEW_TAB_URL, "tab");
+}
+
+function BrowserOpenPrivateTab() {
+  openUILinkIn("about:privatebrowsing", "privatetab");
 }
 
 /* Called from the openLocation dialog. This allows that dialog to instruct
@@ -8086,7 +8092,7 @@ var MousePosTracker = {
 
 function BrowserOpenNewTabOrWindow(event) {
   if (event.shiftKey) {
-    OpenBrowserWindow();
+    BrowserOpenPrivateTab();
   } else {
     BrowserOpenTab();
   }

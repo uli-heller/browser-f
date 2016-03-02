@@ -157,6 +157,7 @@ function whereToOpenLink( e, ignoreButton, ignoreAlt )
  * |where| can be:
  *  "current"     current tab            (if there aren't any browser windows, then in a new window instead)
  *  "tab"         new tab                (if there aren't any browser windows, then in a new window instead)
+ *  "privatetab"  new private tab
  *  "tabshifted"  same as "tab" but in background if default is to select new tabs, and vice versa
  *  "window"      new window
  *  "save"        save to disk (with no filename hint!)
@@ -213,7 +214,7 @@ function openLinkIn(url, where, params) {
   var aInBackground         = params.inBackground;
   var aDisallowInheritPrincipal = params.disallowInheritPrincipal;
   var aInitiatingDoc        = params.initiatingDoc;
-  var aIsPrivate            = params.private;
+  var aIsPrivate            = params.private || (where === "privatetab");
   var aSkipTabAnimation     = params.skipTabAnimation;
   var aAllowPinnedTabHostChange = !!params.allowPinnedTabHostChange;
   var aNoReferrer           = params.noReferrer;
@@ -354,6 +355,7 @@ function openLinkIn(url, where, params) {
     loadInBackground = !loadInBackground;
     // fall through
   case "tab":
+  case "privatetab":
     w.gBrowser.loadOneTab(url, {
       referrerURI: aReferrerURI,
       referrerPolicy: aReferrerPolicy,
@@ -365,7 +367,8 @@ function openLinkIn(url, where, params) {
       skipAnimation: aSkipTabAnimation,
       allowMixedContent: aAllowMixedContent,
       noReferrer: aNoReferrer,
-      userContextId: aUserContextId
+      userContextId: aUserContextId,
+      private: aIsPrivate
     });
     break;
   }

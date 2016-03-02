@@ -69,6 +69,10 @@
   -moz-padding-end: 3px;
 }
 
+.tab-content[private="true"] {
+  background-color: #ED6060 !important;
+}
+
 .tab-throbber,
 .tab-icon-image,
 .tab-icon-sound,

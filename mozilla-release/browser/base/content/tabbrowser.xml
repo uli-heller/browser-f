@@ -1401,6 +1401,7 @@
               aForceNotRemote       = params.forceNotRemote;
               aNoReferrer           = params.noReferrer;
               aUserContextId        = params.userContextId;
+              aPrivate              = params.private;
             }
 
             var bgLoad = (aLoadInBackground != null) ? aLoadInBackground :
@@ -1419,7 +1420,8 @@
                                   allowMixedContent: aAllowMixedContent,
                                   forceNotRemote: aForceNotRemote,
                                   noReferrer: aNoReferrer,
-                                  userContextId: aUserContextId });
+                                  userContextId: aUserContextId,
+                                  private: aPrivate });
             if (!bgLoad)
               this.selectedTab = tab;
 
@@ -1749,6 +1751,7 @@
             var aForceNotRemote;
             var aNoReferrer;
             var aUserContextId;
+            var aPrivate;
             if (arguments.length == 2 &&
                 typeof arguments[1] == "object" &&
                 !(arguments[1] instanceof Ci.nsIURI)) {
@@ -1766,6 +1769,7 @@
               aForceNotRemote       = params.forceNotRemote;
               aNoReferrer           = params.noReferrer;
               aUserContextId        = params.userContextId;
+              aPrivate              = params.private;
             }
 
             // if we're adding tabs, we're past interrupt mode, ditch the owner
@@ -1821,7 +1825,7 @@
             // Private windows are not included because both the label and the
             // icon for the tab would be set incorrectly (see bug 1195981).
             if (aURI == BROWSER_NEW_TAB_URL && !aUserContextId &&
-                !PrivateBrowsingUtils.isWindowPrivate(window)) {
+                !PrivateBrowsingUtils.isWindowPrivate(window) && !aPrivate) {
               b = this._getPreloadedBrowser();
               usingPreloadedContent = !!b;
             }
@@ -1906,6 +1910,13 @@
               if (aAllowMixedContent)
                 flags |= Ci.nsIWebNavigation.LOAD_FLAGS_ALLOW_MIXED_CONTENT;
               try {
+                // Go private before navigating if requested.
+                if (aPrivate) {
+                  //const context = b.docShell.QueryInterface(Ci.nsILoadContext);
+                  b.loadContext.usePrivateBrowsing = true;
+                  t.private = true;
+                }
+
                 b.loadURIWithFlags(aURI, {
                                    flags: flags,
                                    referrerURI: aNoReferrer ? null: aReferrerURI,
@@ -5883,7 +5894,7 @@
           <xul:hbox xbl:inherits="pinned,selected,visuallyselected"
                     class="tab-background-end"/>
         </xul:hbox>
-        <xul:hbox xbl:inherits="pinned,selected,visuallyselected,titlechanged,attention"
+        <xul:hbox xbl:inherits="pinned,selected,visuallyselected,titlechanged,attention,private"
                   class="tab-content" align="center">
           <xul:image xbl:inherits="fadein,pinned,busy,progress,selected,visuallyselected"
                      class="tab-throbber"
@@ -5998,6 +6009,22 @@
         <getter>
           return this.getAttribute("hidden") == "true";
         </getter>
+      </property>
+      <!--
+      Shown, whether this tab is marked private.
+      NOTE: This is only a visual hint, it has no effect on the contained
+      browser and its docShell/loaderContext.
+      -->
+      <property name="private"
+          onget="return this.getAttribute('private') === 'true'">
+        <setter>
+        <![CDATA[
+          if (val)
+            this.setAttribute("private", "true");
+          else
+            this.removeAttribute("private");
+        ]]>
+        </setter>
       </property>
 
       <property name="lastAccessed">
@@ -6508,6 +6535,10 @@
                 postData: aPostData,
               };
             }
+            if (AutoPrivateTab.shouldLoadURIInPrivateMode(aURI)) {
+              this.loadContext.usePrivateBrowsing = true;
+              gBrowser.getTabForBrowser(this).private = true;
+            }
             _loadURIWithFlags(this, aURI, params);
           ]]>
         </body>
@@ -6537,6 +6568,10 @@
                 charset: aCharset,
                 postData: aPostData,
               };
+            }
+            if (AutoPrivateTab.shouldLoadURIInPrivateMode(aURI)) {
+              this.loadContext.usePrivateBrowsing = true;
+              gBrowser.getTabForBrowser(this).private = true;
             }
             _loadURIWithFlags(this, aURI, params);
           ]]>
