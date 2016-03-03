@@ -6535,10 +6535,6 @@
                 postData: aPostData,
               };
             }
-            if (AutoPrivateTab.shouldLoadURIInPrivateMode(aURI)) {
-              this.loadContext.usePrivateBrowsing = true;
-              gBrowser.getTabForBrowser(this).private = true;
-            }
             _loadURIWithFlags(this, aURI, params);
           ]]>
         </body>
@@ -6568,10 +6564,6 @@
                 charset: aCharset,
                 postData: aPostData,
               };
-            }
-            if (AutoPrivateTab.shouldLoadURIInPrivateMode(aURI)) {
-              this.loadContext.usePrivateBrowsing = true;
-              gBrowser.getTabForBrowser(this).private = true;
             }
             _loadURIWithFlags(this, aURI, params);
           ]]>

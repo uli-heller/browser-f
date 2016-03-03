@@ -876,10 +876,15 @@ function gKeywordURIFixup({ target: browser, data: fixupInfo }) {
 
 // A shared function used by both remote and non-remote browser XBL bindings to
 // load a URI or redirect it to the correct process.
+// |browser| is the {xul::browser} element (binding id="tabbrowser-browser").
 function _loadURIWithFlags(browser, uri, params) {
   if (!uri) {
     uri = "about:blank";
   }
+  else {
+    AutoPrivateTab.handleTabNavigation(uri, browser);
+  }
+
   let flags = params.flags || 0;
   let referrer = params.referrerURI;
   let referrerPolicy = ('referrerPolicy' in params ? params.referrerPolicy :
