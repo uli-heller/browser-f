@@ -2005,7 +2005,7 @@ function BrowserOpenTab()
 }
 
 function BrowserOpenPrivateTab() {
-  openUILinkIn("about:privatebrowsing", "privatetab");
+  openUILinkIn("about:privatebrowsing", "tab", {private: true});
 }
 
 /* Called from the openLocation dialog. This allows that dialog to instruct
@@ -5793,7 +5793,9 @@ function contentAreaClick(event, isPanelClick)
   // pages loaded in frames are embed visits and lost with the session, while
   // visits across frames should be preserved.
   try {
-    if (!PrivateBrowsingUtils.isWindowPrivate(window))
+    const doc = event.target.ownerDocument;
+    const privateTab = doc && doc.docShell.usePrivateBrowsing;
+    if (!PrivateBrowsingUtils.isWindowPrivate(window) && !privateTab)
       PlacesUIUtils.markPageAsFollowedLink(href);
   } catch (ex) { /* Skip invalid URIs. */ }
 }
@@ -5812,10 +5814,11 @@ function handleLinkClick(event, href, linkNode) {
     return false;
 
   var doc = event.target.ownerDocument;
+  const privateTab = doc && doc.docShell.usePrivateBrowsing;
 
   if (where == "save") {
     saveURL(href, linkNode ? gatherTextUnder(linkNode) : "", null, true,
-            true, doc.documentURIObject, doc);
+            true, doc.documentURIObject, doc, privateTab);
     event.preventDefault();
     return true;
   }
@@ -5854,7 +5857,8 @@ function handleLinkClick(event, href, linkNode) {
                  allowMixedContent: persistAllowMixedContentInChildTab,
                  referrerURI: referrerURI,
                  referrerPolicy: referrerPolicy,
-                 noReferrer: BrowserUtils.linkHasNoReferrer(linkNode) };
+                 noReferrer: BrowserUtils.linkHasNoReferrer(linkNode),
+                 private: privateTab};
   openLinkIn(href, where, params);
   event.preventDefault();
   return true;
