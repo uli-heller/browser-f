@@ -1,5 +1,8 @@
 // Coyright Cliqz GmbH, 2015.
 
+const uriFixup = Cc["@mozilla.org/docshell/urifixup;1"]
+    .getService(Ci.nsIURIFixup);
+
 const AutoPrivateTab = {
   init: function APT_init() {
     const bf = {};
@@ -47,7 +50,7 @@ const AutoPrivateTab = {
       }
       else {
         spec = uri;
-        uri = Services.io.newURI(spec, null, null);
+        uri = uriFixup.createFixupURI(spec, uriFixup.FIXUP_FLAG_NONE);
       }
 
       if (!uri.schemeIs("http") && !uri.schemeIs("https"))
