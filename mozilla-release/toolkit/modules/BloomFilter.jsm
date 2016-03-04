@@ -8,8 +8,6 @@ const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-//XPCOMUtils.defineLazyModuleGetter(this, "CommonUtils",
-//    "resource://services-common/utils.js");
 XPCOMUtils.defineLazyGetter(this, "utf8Converter", function() {
   let converter = Cc["@mozilla.org/intl/scriptableunicodeconverter"]
       .createInstance(Ci.nsIScriptableUnicodeConverter);
@@ -32,6 +30,8 @@ function md5string(input /* string */) {
   return result;
 }
 
+const BITS_PER_BUCKET = 32;
+
 // Returns a pair of numbers suitable for initialization of a |BloomFilter|
 // instance: size of
 // |nElements| is the expected number of stored elements.
@@ -40,7 +40,7 @@ function calculateFilterProperties(nElements, falseRate) {
   let m = -1.0 * nElements * Math.log(falseRate) / Math.LN2 / Math.LN2;
   m = Math.floor(m * 1.1);
   let k = Math.floor(m / nElements * Math.LN2);
-  return [Math.floor(m / 32), k];
+  return [Math.floor(m / BITS_PER_BUCKET), k];
 }
 
 // |elementsOrSize| is either an array with initial values (numbers), or a
@@ -60,93 +60,82 @@ function BloomFilter(elementsOrSize, nHashes) {
     size = elements.length;
   }
 
-  let m = this.m = size * 32;  // 32 bits for each element
+  let m = this.m = size * BITS_PER_BUCKET;
   this.k = nHashes;
-
-  let kbytes = 1 << Math.ceil(
-      Math.log(Math.ceil(Math.log(m) / Math.LN2 / 8)) /
-      Math.LN2);
-  // Choose data type:
-  let arrayClass = {
-    1: Uint8Array,
-    2: Uint16Array
-  }[kbytes] || Uint32Array;
 
   // Put the elements into their bucket.
   let buckets = this.buckets = new Int32Array(size);
   for (let i = 0; i < size; i++) {
     buckets[i] = elements[i];
   }
-  // Stores location for each hash function.
-  this._locations = new arrayClass(new ArrayBuffer(kbytes * nHashes));
 }
 
-BloomFilter.prototype.locations = function(a, b) {
-  // we use 2 hash values to generate k hash values
-  var k = this.k,
-      m = this.m,
-      r = this._locations;
-  a = parseInt(a, 16);
-  b = parseInt(b, 16);
-  var x = a % m;
-
-  for (var i = 0; i < k; ++i) {
-    r[i] = x < 0 ? (x + m) : x;
-    x = (x + b) % m;
+BloomFilter.prototype.update = function(a) {
+  var m = a.length * BITS_PER_BUCKET,
+      n = a.length,
+      i = -1;
+  m = n * BITS_PER_BUCKET;
+  if (this.m !== m) {
+    throw new Error('Bloom filter can only be updated with same length');
   }
-  return r;
+  while (++i < n) {
+    this.buckets[i] |= a[i];
+  }
 };
 
-BloomFilter.prototype.test = function(a, b) {
-  // since MD5 will be calculated before hand,
-  // we allow using hash value as input to
+BloomFilter.prototype.test = function(x) {
+  const [a, b] = this._a_b(x);
+  return this._test(a, b);
+};
 
-  var l = this.locations(a, b),
-      k = this.k,
-      buckets = this.buckets;
-  for (var i = 0; i < k; ++i) {
-    var bk = l[i];
-    if ((buckets[Math.floor(bk / 32)] & (1 << (bk % 32))) === 0) {
+BloomFilter.prototype.add = function(x) {
+  const [a, b] = this._a_b(x);
+  return this._add(a, b);
+};
+
+// Checks whether a value represented by its subhashes |a| and |b| is present in
+// current filter set.
+// |a| and |b| must be numbers.
+BloomFilter.prototype._test = function(a, b) {
+  const buckets = this.buckets;
+  for (let bitIndex of this._bitIndexes(a, b)) {
+    const bucketIndex = Math.floor(bitIndex / BITS_PER_BUCKET);
+    const bucketBitIndex = 1 << (bitIndex % BITS_PER_BUCKET);
+    if ((buckets[bucketIndex] & bucketBitIndex) === 0) {
       return false;
     }
   }
   return true;
 };
 
-BloomFilter.prototype.testSingle = function(x) {
-  var md5Hex = md5string(x);
-  var a = md5Hex.substring(0, 8),
-      b = md5Hex.substring(8, 16);
-  return this.test(a, b);
-};
-
-BloomFilter.prototype.add = function(a, b) {
-  // Maybe used to add local safeKey to bloom filter
-  var l = this.locations(a, b),
-      k = this.k,
-      buckets = this.buckets;
-  for (var i = 0; i < k; ++i) {
-    buckets[Math.floor(l[i] / 32)] |= 1 << (l[i] % 32);
+// Puts a value represented by its subhashes |a| and |b| into filter set.
+// |a| and |b| must be numbers.
+BloomFilter.prototype._add = function(a, b) {
+  const buckets = this.buckets;
+  for (let bitIndex of this._bitIndexes(a, b)) {
+    const bucketIndex = Math.floor(bitIndex / BITS_PER_BUCKET);
+    const bucketBitIndex = 1 << (bitIndex % BITS_PER_BUCKET);
+    buckets[bucketIndex] |= bucketBitIndex;
   }
 };
 
-BloomFilter.prototype.addSingle = function(x) {
-  var md5Hex = md5string(x);
-  var a = md5Hex.substring(0, 8),
-      b = md5Hex.substring(8, 16);
-  return this.add(a, b);
-};
+BloomFilter.prototype._a_b = function(x) {
+  const md5Hex = md5string(x);
+  const a = parseInt(md5Hex.substring(0, 8), 16);
+  const b = parseInt(md5Hex.substring(8, 16), 16);
+  return [a, b];
+}
 
-BloomFilter.prototype.update = function(a) {
-  // update the bloom filter, used in minor revison for every 10 min
-  var m = a.length * 32,  // 32 bit for each element
-      n = a.length,
-      i = -1;
-  m = n * 32;
-  if (this.m !== m) {
-    throw new Error('Bloom filter can only be updated with same length');
-  }
-  while (++i < n) {
-    this.buckets[i] |= a[i];
+// For a pair of given subhashes of a value yields a series of bit indexes to
+// read or write to.
+// |a| and |b| must be numbers.
+BloomFilter.prototype._bitIndexes = function(a, b) {
+  const k = this.k;
+  const m = this.m;
+  let x = a % m;
+
+  for (let i = 0; i < k; ++i) {
+    yield (x < 0 ? x + m : x);
+    x = (x + b) % m;
   }
 };

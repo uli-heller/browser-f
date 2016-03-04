@@ -17,7 +17,7 @@ const AutoPrivateTab = {
         'wikipedia.org'
     ];
     for (let domain of domains) {
-      this._filter.addSingle(domain);
+      this._filter.add(domain);
     }
     // TODO: load bloom filter data
   },
@@ -57,7 +57,7 @@ const AutoPrivateTab = {
         return [false, undefined];
 
       const host = uri.host.replace(/^www\./i, '');
-      const pm = !this._whiteList.has(host) && this._filter.testSingle(host);
+      const pm = !this._whiteList.has(host) && this._filter.test(host);
       return [pm, host];
     }
     catch (e) {
