@@ -47,27 +47,33 @@ function calculateFilterProperties(nElements, falseRate) {
 // size for internal storage. You can calculate it, and |nHashes| using
 // |calculateFilterProperties|.
 function BloomFilter(elementsOrSize, nHashes) {
-  let elements = [];
-  let size = 0;
-  if (typeof elementsOrSize === 'number') {
-    size = elementsOrSize;
-    for (let i = 0; i < size; i++) {
-      elements.push(0);
-    }
+  if (elementsOrSize.constructor.name === "ArrayBuffer") {
+    this._buckets = new Int32Array(elementsOrSize);
   }
   else {
-    elements = elementsOrSize;
-    size = elements.length;
+    let size = 0;
+    let elements = [];
+    if (typeof elementsOrSize === "number") {
+      size = elementsOrSize;
+    }
+    else if (typeof elementsOrSize === "object" &&
+             elementsOrSize.constructor.name === "Array") {
+      elements = elementsOrSize;
+      size = elements.length;
+    }
+    else {
+      throw new TypeError(
+          "First argument must be either an integer, or array or ArrayBuffer");
+    }
+    let buckets = this._buckets = new Int32Array(size);
+    // If |elementsOrSize| is an array we'll copy its elements:
+    for (let i = 0; i < elements.length; i++) {
+      buckets[i] = elements[i];
+    }
   }
 
-  let m = this.m = size * BITS_PER_BUCKET;
+  this.m = this._buckets.length * BITS_PER_BUCKET;
   this.k = nHashes;
-
-  // Put the elements into their bucket.
-  let buckets = this.buckets = new Int32Array(size);
-  for (let i = 0; i < size; i++) {
-    buckets[i] = elements[i];
-  }
 }
 
 BloomFilter.prototype.update = function(a) {
@@ -79,7 +85,7 @@ BloomFilter.prototype.update = function(a) {
     throw new Error('Bloom filter can only be updated with same length');
   }
   while (++i < n) {
-    this.buckets[i] |= a[i];
+    this._buckets[i] |= a[i];
   }
 };
 
@@ -97,7 +103,7 @@ BloomFilter.prototype.add = function(x) {
 // current filter set.
 // |a| and |b| must be numbers.
 BloomFilter.prototype._test = function(a, b) {
-  const buckets = this.buckets;
+  const buckets = this._buckets;
   for (let bitIndex of this._bitIndexes(a, b)) {
     const bucketIndex = Math.floor(bitIndex / BITS_PER_BUCKET);
     const bucketBitIndex = 1 << (bitIndex % BITS_PER_BUCKET);
@@ -111,7 +117,7 @@ BloomFilter.prototype._test = function(a, b) {
 // Puts a value represented by its subhashes |a| and |b| into filter set.
 // |a| and |b| must be numbers.
 BloomFilter.prototype._add = function(a, b) {
-  const buckets = this.buckets;
+  const buckets = this._buckets;
   for (let bitIndex of this._bitIndexes(a, b)) {
     const bucketIndex = Math.floor(bitIndex / BITS_PER_BUCKET);
     const bucketBitIndex = 1 << (bitIndex % BITS_PER_BUCKET);

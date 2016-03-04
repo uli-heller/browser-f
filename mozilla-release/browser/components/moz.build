@@ -47,6 +47,7 @@ EXTRA_COMPONENTS += [
 ]
 
 EXTRA_JS_MODULES += [
+    'AutoPrivateTab.jsm',
     'distribution.js',
 ]
 

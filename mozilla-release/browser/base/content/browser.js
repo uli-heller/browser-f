@@ -259,6 +259,9 @@ XPCOMUtils.defineLazyModuleGetter(this, "ReaderParent",
 XPCOMUtils.defineLazyModuleGetter(this, "LoginManagerParent",
   "resource://gre/modules/LoginManagerParent.jsm");
 
+XPCOMUtils.defineLazyModuleGetter(this, "AutoPrivateTab",
+  "resource:///modules/AutoPrivateTab.jsm");
+
 var gInitialPages = [
   "about:blank",
   "about:newtab",
@@ -286,7 +289,6 @@ var gInitialPages = [
 #include browser-tabview.js
 #include browser-thumbnails.js
 #include browser-trackingprotection.js
-#include browser-autoPrivateTab.js
 
 #ifdef MOZ_DATA_REPORTING
 #include browser-data-submission-info-bar.js
@@ -983,7 +985,6 @@ var gBrowserInit = {
     DevEdition.init();
     AboutPrivateBrowsingListener.init();
     TrackingProtection.init();
-    AutoPrivateTab.init();
 
     let mm = window.getGroupMessageManager("browsers");
     mm.loadFrameScript("chrome://browser/content/tab-content.js", true);
