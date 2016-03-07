@@ -10,6 +10,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 const bf = {};
 Cu.import("resource://gre/modules/BloomFilter.jsm", bf);
 Cu.import("resource://gre/modules/Timer.jsm");
+Cu.import("resource://gre/modules/FileUtils.jsm");
 
 const PORN_DATA_FILE_NAME = "porn-domains.bin";
 const FILTER_N_HASHES = 14;
@@ -66,6 +67,12 @@ function readBinary(file) {
 
 var filter;
 (function init() {
+  var filterBinFile = FileUtils.getFile("XCurProcD", [PORN_DATA_FILE_NAME]);
+  if (filterBinFile.exists()) {
+    filter = new bf.BloomFilter(readBinary(filterBinFile), FILTER_N_HASHES);
+    return;
+  }
+#if 0
   const profD = Services.dirsvc.get("ProfD", Ci.nsIFile);
   const filterBinFile = profD.clone();
   filterBinFile.append(PORN_DATA_FILE_NAME);
@@ -101,6 +108,7 @@ var filter;
   finally {
     foStream.close();
   }
+#endif
 })();
 
 const AutoPrivateTab = {
